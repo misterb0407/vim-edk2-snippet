@@ -9,21 +9,10 @@ function! edk2_snippet#setup() abort
   endif
 endfunction
 
-function! edk2_snippet#menu() abort
-  let l:choice = inputlist(['EDK2 snippets:', '1. LocateProtocol', '0. Cancel'])
-  call edk2_snippet#select(l:choice)
-endfunction
-
-function! edk2_snippet#select(choice) abort
-  if a:choice == 1
-    call edk2_snippet#insert_locate_protocol()
-  endif
-endfunction
-
-function! edk2_snippet#insert_locate_protocol() abort
-  let l:indent = matchstr(getline('.'), '^\s*')
-  let l:lines = [
-        \ '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-locateprotocol',
+let s:snippets = [
+      \ { 'name': 'LocateProtocol', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-locateprotocol',
+      \   '  // brief: Find the first interface for a protocol.',
         \ '  EFI_STATUS               Status = EFI_NOT_STARTED;',
         \ '  EFI_ACPI_TABLE_PROTOCOL  *AcpiTable;',
         \ '',
@@ -37,7 +26,264 @@ function! edk2_snippet#insert_locate_protocol() abort
         \ '  }',
         \ '',
         \ '  // Use AcpiTable->InstallAcpiTable (...) as needed.',
-        \ ]
+      \ ] },
+      \ { 'name': 'LocateHandle', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-locatehandle',
+      \   '  // brief: Find handles supporting a protocol using a caller-managed buffer.',
+      \   '  EFI_STATUS  Status;',
+      \   '  UINTN       BufferSize;',
+      \   '  EFI_HANDLE  *Handles;',
+      \   '',
+      \   '  BufferSize = 0;',
+      \   '  Handles    = NULL;',
+      \   '  Status = gBS->LocateHandle (ByProtocol, &gEfiBlockIoProtocolGuid, NULL, &BufferSize, Handles);',
+      \   '  if (Status == EFI_BUFFER_TOO_SMALL) {',
+      \   '    Handles = AllocatePool (BufferSize);',
+      \   '    if (Handles == NULL) {',
+      \   '      return EFI_OUT_OF_RESOURCES;',
+      \   '    }',
+      \   '    Status = gBS->LocateHandle (ByProtocol, &gEfiBlockIoProtocolGuid, NULL, &BufferSize, Handles);',
+      \   '    if (!EFI_ERROR (Status)) {',
+      \   '      // Use Handles[0 .. BufferSize / sizeof (EFI_HANDLE) - 1].',
+      \   '    }',
+      \   '    FreePool (Handles);',
+      \   '  }',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \ ] },
+      \ { 'name': 'LocateHandleBuffer', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-locatehandlebuffer',
+      \   '  // brief: Find handles supporting a protocol in an allocated buffer.',
+      \   '  EFI_STATUS  Status;',
+      \   '  UINTN       HandleCount;',
+      \   '  EFI_HANDLE  *Handles;',
+      \   '',
+      \   '  Status = gBS->LocateHandleBuffer (ByProtocol, &gEfiBlockIoProtocolGuid, NULL, &HandleCount, &Handles);',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \   '  // Use Handles[0 .. HandleCount - 1].',
+      \   '  FreePool (Handles);',
+      \ ] },
+      \ { 'name': 'LocateDevicePath', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-locatedevicepath',
+      \   '  // brief: Find the closest handle supporting a protocol along a device path.',
+      \   '  EFI_STATUS                Status;',
+      \   '  EFI_HANDLE                DeviceHandle;',
+      \   '  EFI_DEVICE_PATH_PROTOCOL  *RemainingPath;',
+      \   '',
+      \   '  // DevicePath is an existing EFI_DEVICE_PATH_PROTOCOL pointer.',
+      \   '  RemainingPath = DevicePath;',
+      \   '  Status = gBS->LocateDevicePath (&gEfiSimpleFileSystemProtocolGuid, &RemainingPath, &DeviceHandle);',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \   '  // DeviceHandle identifies the filesystem; RemainingPath points to the unmatched path.',
+      \ ] },
+      \ { 'name': 'HandleProtocol', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-handleprotocol',
+      \   '  // brief: Get a protocol interface from a known handle.',
+      \   '  EFI_STATUS             Status;',
+      \   '  EFI_BLOCK_IO_PROTOCOL  *BlockIo;',
+      \   '',
+      \   '  // DeviceHandle is an existing handle.',
+      \   '  Status = gBS->HandleProtocol (DeviceHandle, &gEfiBlockIoProtocolGuid, (VOID **)&BlockIo);',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \   '  // Use BlockIo to access the device.',
+      \ ] },
+      \ { 'name': 'OpenProtocol', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-openprotocol',
+      \   '  // brief: Open a protocol interface on a known handle.',
+      \   '  EFI_STATUS             Status;',
+      \   '  EFI_BLOCK_IO_PROTOCOL  *BlockIo;',
+      \   '',
+      \   '  // ControllerHandle and ImageHandle are the controller and this driver image.',
+      \   '  Status = gBS->OpenProtocol (',
+      \   '                  ControllerHandle,',
+      \   '                  &gEfiBlockIoProtocolGuid,',
+      \   '                  (VOID **)&BlockIo,',
+      \   '                  ImageHandle,',
+      \   '                  ControllerHandle,',
+      \   '                  EFI_OPEN_PROTOCOL_BY_DRIVER',
+      \   '                  );',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \   '  // Use BlockIo; close it with the same handles when the driver stops.',
+      \ ] },
+      \ { 'name': 'CloseProtocol', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-closeprotocol',
+      \   '  // brief: Close a tracked protocol opening.',
+      \   '  EFI_STATUS  Status;',
+      \   '',
+      \   '  // Match the handle, protocol, agent, and controller used by OpenProtocol.',
+      \   '  Status = gBS->CloseProtocol (',
+      \   '                  ControllerHandle,',
+      \   '                  &gEfiBlockIoProtocolGuid,',
+      \   '                  ImageHandle,',
+      \   '                  ControllerHandle',
+      \   '                  );',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \ ] },
+      \ { 'name': 'InstallProtocolInterface', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-installprotocolinterface',
+      \   '  // brief: Install one protocol interface on a handle.',
+      \   '  EFI_STATUS  Status;',
+      \   '  EFI_HANDLE  Handle;',
+      \   '',
+      \   '  // MyDriverBinding is an initialized EFI_DRIVER_BINDING_PROTOCOL instance.',
+      \   '  Handle = NULL;',
+      \   '  Status = gBS->InstallProtocolInterface (',
+      \   '                  &Handle,',
+      \   '                  &gEfiDriverBindingProtocolGuid,',
+      \   '                  EFI_NATIVE_INTERFACE,',
+      \   '                  &MyDriverBinding',
+      \   '                  );',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \   '  // Keep Handle and MyDriverBinding alive until the interface is uninstalled.',
+      \ ] },
+      \ { 'name': 'ReinstallProtocolInterface', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-reinstallprotocolinterface',
+      \   '  // brief: Replace an installed protocol interface on a handle.',
+      \   '  EFI_STATUS  Status;',
+      \   '',
+      \   '  // Handle, OldInterface, and NewInterface refer to existing driver binding instances.',
+      \   '  Status = gBS->ReinstallProtocolInterface (',
+      \   '                  Handle,',
+      \   '                  &gEfiDriverBindingProtocolGuid,',
+      \   '                  OldInterface,',
+      \   '                  NewInterface',
+      \   '                  );',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \   '  // Keep NewInterface alive until it is removed or replaced.',
+      \ ] },
+      \ { 'name': 'UninstallProtocolInterface', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-uninstallprotocolinterface',
+      \   '  // brief: Remove one protocol interface from a handle.',
+      \   '  EFI_STATUS  Status;',
+      \   '',
+      \   '  // Handle and MyDriverBinding identify the previously installed interface.',
+      \   '  Status = gBS->UninstallProtocolInterface (',
+      \   '                  Handle,',
+      \   '                  &gEfiDriverBindingProtocolGuid,',
+      \   '                  &MyDriverBinding',
+      \   '                  );',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \ ] },
+      \ { 'name': 'InstallMultipleProtocolInterfaces', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-installmultipleprotocolinterfaces',
+      \   '  // brief: Install one or more protocol interfaces on a handle.',
+      \   '  EFI_STATUS  Status;',
+      \   '',
+      \   '  // ImageHandle and both initialized protocol instances belong to this driver.',
+      \   '  Status = gBS->InstallMultipleProtocolInterfaces (',
+      \   '                  &ImageHandle,',
+      \   '                  &gEfiDriverBindingProtocolGuid,',
+      \   '                  &MyDriverBinding,',
+      \   '                  &gEfiComponentName2ProtocolGuid,',
+      \   '                  &MyComponentName2,',
+      \   '                  NULL',
+      \   '                  );',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \   '  // Keep both instances alive until they are uninstalled.',
+      \ ] },
+      \ { 'name': 'UninstallMultipleProtocolInterfaces', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-uninstallmultipleprotocolinterfaces',
+      \   '  // brief: Remove one or more protocol interfaces from a handle.',
+      \   '  EFI_STATUS  Status;',
+      \   '',
+      \   '  // Match the handle and interface instances used when installing the protocols.',
+      \   '  Status = gBS->UninstallMultipleProtocolInterfaces (',
+      \   '                  ImageHandle,',
+      \   '                  &gEfiDriverBindingProtocolGuid,',
+      \   '                  &MyDriverBinding,',
+      \   '                  &gEfiComponentName2ProtocolGuid,',
+      \   '                  &MyComponentName2,',
+      \   '                  NULL',
+      \   '                  );',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \ ] },
+      \ { 'name': 'RegisterProtocolNotify', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-registerprotocolnotify',
+      \   '  // brief: Signal an event when a protocol interface is installed or reinstalled.',
+      \   '  EFI_STATUS  Status;',
+      \   '  VOID        *Registration;',
+      \   '',
+      \   '  // NotifyEvent is an existing event created with gBS->CreateEvent().',
+      \   '  Status = gBS->RegisterProtocolNotify (&gEfiBlockIoProtocolGuid, NotifyEvent, &Registration);',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    gBS->CloseEvent (NotifyEvent);',
+      \   '    return Status;',
+      \   '  }',
+      \   '  // Keep NotifyEvent and Registration for the notification handler; close the event when done.',
+      \ ] },
+      \ { 'name': 'ProtocolsPerHandle', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-protocolsperhandle',
+      \   '  // brief: Get the protocol GUIDs installed on a handle.',
+      \   '  EFI_STATUS  Status;',
+      \   '  EFI_GUID    **ProtocolGuids;',
+      \   '  UINTN       ProtocolCount;',
+      \   '',
+      \   '  // Handle is an existing handle.',
+      \   '  Status = gBS->ProtocolsPerHandle (Handle, &ProtocolGuids, &ProtocolCount);',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \   '  // Inspect ProtocolGuids[0 .. ProtocolCount - 1].',
+      \   '  FreePool (ProtocolGuids);',
+      \ ] },
+      \ { 'name': 'OpenProtocolInformation', 'lines': [
+      \   '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-openprotocolinformation',
+      \   '  // brief: Get information about agents that opened a protocol.',
+      \   '  EFI_STATUS                           Status;',
+      \   '  EFI_OPEN_PROTOCOL_INFORMATION_ENTRY  *Entries;',
+      \   '  UINTN                                EntryCount;',
+      \   '',
+      \   '  // Handle is an existing handle supporting Block I/O.',
+      \   '  Status = gBS->OpenProtocolInformation (Handle, &gEfiBlockIoProtocolGuid, &Entries, &EntryCount);',
+      \   '  if (EFI_ERROR (Status)) {',
+      \   '    return Status;',
+      \   '  }',
+      \   '  // Inspect Entries[0 .. EntryCount - 1].',
+      \   '  if (Entries != NULL) {',
+      \   '    FreePool (Entries);',
+      \   '  }',
+      \ ] },
+      \ ]
+
+function! edk2_snippet#menu() abort
+  let l:items = ['EDK2 snippets:']
+  for l:index in range(len(s:snippets))
+    call add(l:items, (l:index + 1) . '. ' . s:snippets[l:index].name)
+  endfor
+  call add(l:items, '0. Cancel')
+  call edk2_snippet#select(inputlist(l:items))
+endfunction
+
+function! edk2_snippet#select(choice) abort
+  if a:choice < 1 || a:choice > len(s:snippets)
+    return
+  endif
+  let l:indent = matchstr(getline('.'), '^\s*')
+  let l:lines = copy(s:snippets[a:choice - 1].lines)
   call append(line('.'), map(l:lines, 'l:indent . v:val'))
 endfunction
 
+function! edk2_snippet#insert_locate_protocol() abort
+  call edk2_snippet#select(1)
+endfunction
