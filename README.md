@@ -12,7 +12,7 @@ Plug 'misterb0407/vim-edk2-snippet'
 
 ## Usage
 
-In any buffer, press `<Leader>e` in Normal mode, then enter the number of a snippet. Select `0` or press Escape to cancel. The snippet is inserted on the next line, aligned with the cursor's column. The menu contains 15 UEFI Boot Services protocol examples, each with a specification reference and brief description. Examples may need adaptation to the surrounding code; include the required protocol and library headers and INF dependencies.
+In any buffer, press `<Leader>e` in Normal mode, then enter the number of a snippet. Select `0` or press Escape to cancel. The snippet is inserted on the next line, aligned with the cursor's column. The menu contains 24 UEFI Boot Services examples covering protocols, events, timers, and task priority, each with a specification reference and brief description. Examples may need adaptation to the surrounding code; include the required protocol and library headers and INF dependencies.
 
 Set the mapping before the plugin loads to change it:
 
