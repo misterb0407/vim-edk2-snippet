@@ -9,10 +9,12 @@ let names = ['LocateProtocol', 'LocateHandle', 'LocateHandleBuffer', 'LocateDevi
 for index in range(len(names))
   silent %delete _
   call setline(1, '    example')
+  call cursor(1, 5)
   call edk2_snippet#select(index + 1)
+  call assert_equal('    example', getline(1))
   let lines = getline(2, '$')
-  call assert_equal('      // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-' . tolower(names[index]), lines[0])
-  call assert_match('^      // brief: .\+', lines[1])
+  call assert_equal('    // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-' . tolower(names[index]), lines[0])
+  call assert_match('^    // brief: .\+', lines[1])
   call assert_match('gBS->' . names[index] . ' (', join(lines, "\n"))
   call assert_true(len(filter(copy(lines), 'v:val !~# "^    "')) == 0, names[index] . ' indentation')
   if index([1, 2, 13, 14], index) >= 0
@@ -24,6 +26,7 @@ for index in range(len(names))
 endfor
 silent %delete _
 call setline(1, '    example')
+call cursor(1, 5)
 call edk2_snippet#select(1)
 call assert_match('Status = EFI_NOT_STARTED;', getline(4))
 let before = getline(1, '$')
@@ -31,6 +34,19 @@ for choice in [0, -1, 16, 999]
   call edk2_snippet#select(choice)
   call assert_equal(before, getline(1, '$'))
 endfor
+silent %delete _
+call setline(1, 'abcXYZ')
+call cursor(1, 4)
+call edk2_snippet#select(1)
+call assert_equal('abcXYZ', getline(1))
+call assert_match('^   // Ref:', getline(2))
+call assert_match('^   // brief:', getline(3))
+silent %delete _
+call setline(1, '')
+call edk2_snippet#select(1)
+call assert_equal('', getline(1))
+call assert_match('^// Ref:', getline(2))
+call assert_match('^// brief:', getline(3))
 enew!
 nnoremap <buffer> <Leader>e :echo 'existing'<CR>
 setfiletype cpp

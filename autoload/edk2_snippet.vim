@@ -279,9 +279,11 @@ function! edk2_snippet#select(choice) abort
   if a:choice < 1 || a:choice > len(s:snippets)
     return
   endif
-  let l:indent = matchstr(getline('.'), '^\s*')
+  let l:indent = repeat(' ', virtcol('.') - 1)
   let l:lines = copy(s:snippets[a:choice - 1].lines)
-  call append(line('.'), map(l:lines, 'l:indent . v:val'))
+  call map(l:lines, "substitute(v:val, '^  ', '', '')")
+  call map(l:lines, 'l:indent . v:val')
+  call append(line('.'), l:lines)
 endfunction
 
 function! edk2_snippet#insert_locate_protocol() abort
