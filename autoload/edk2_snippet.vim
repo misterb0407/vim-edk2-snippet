@@ -24,11 +24,19 @@ function! edk2_snippet#insert_locate_protocol() abort
   let l:indent = matchstr(getline('.'), '^\s*')
   let l:lines = [
         \ '  // Ref: https://uefi.org/specs/UEFI/2.11/07_Services_Boot_Services.html#efi-boot-services-locateprotocol',
-        \ '  EFI_STATUS  Status = gBS->LocateProtocol (',
-        \ '                             &gXxxHandlerProtocolGuid, // IN EFI_GUID',
-        \ '                             NULL, // IN VOID   *Registration OPTIONAL',
-        \ '                             (VOID **)&Interface // OUT VOID',
-        \ '                             );',
+        \ '  EFI_STATUS               Status = EFI_NOT_STARTED;',
+        \ '  EFI_ACPI_TABLE_PROTOCOL  *AcpiTable;',
+        \ '',
+        \ '  Status = gBS->LocateProtocol (',
+        \ '                  &gEfiAcpiTableProtocolGuid,',
+        \ '                  NULL,',
+        \ '                  (VOID **)&AcpiTable',
+        \ '                  );',
+        \ '  if (EFI_ERROR (Status)) {',
+        \ '    return Status;',
+        \ '  }',
+        \ '',
+        \ '  // Use AcpiTable->InstallAcpiTable (...) as needed.',
         \ ]
   call append(line('.'), map(l:lines, 'l:indent . v:val'))
 endfunction
