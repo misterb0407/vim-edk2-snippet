@@ -12,7 +12,7 @@ Plug 'misterb0407/vim-edk2-snippet'
 
 ## Usage
 
-In a C or C++ buffer, press `<Leader>e` in Normal mode, then enter the number of a snippet. Select `0` or press Escape to cancel. The snippet is inserted below the current line, using its indentation. The initial menu contains LocateProtocol.
+In any buffer, press `<Leader>e` in Normal mode, then enter the number of a snippet. Select `0` or press Escape to cancel. The snippet is inserted below the current line, using its indentation. The initial menu contains LocateProtocol.
 
 Set the mapping before the plugin loads to change it:
 

@@ -5,5 +5,5 @@ let g:loaded_edk2_snippet = 1
 
 augroup edk2_snippet
   autocmd!
-  autocmd FileType c,cpp call edk2_snippet#setup()
+  autocmd BufEnter * call edk2_snippet#setup()
 augroup END

@@ -3,7 +3,7 @@ execute 'set runtimepath^=' . fnameescape(fnamemodify(expand('<sfile>:p'), ':h:h
 let mapleader = ' '
 runtime plugin/edk2_snippet.vim
 new
-setfiletype c
+setfiletype text
 call assert_notequal('', maparg('<Leader>e', 'n'))
 call setline(1, '    example')
 call edk2_snippet#select(1)
@@ -18,11 +18,11 @@ call edk2_snippet#select(0)
 call assert_equal(before, getline(1, '$'))
 enew!
 nnoremap <buffer> <Leader>e :echo 'existing'<CR>
-setfiletype cpp
+setfiletype textpp
 call assert_match('existing', maparg('<Leader>e', 'n'))
-enew!
 let g:edk2_snippet_no_default_mapping = 1
-setfiletype c
+enew!
+setfiletype text
 call assert_equal('', maparg('<Leader>e', 'n'))
 if len(v:errors)
   call writefile(v:errors, 'tests/errors.log')
